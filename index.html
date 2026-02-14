@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian Editor</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+    <style>
+        body { 
+            margin: 0; padding: 0; font-family: sans-serif; 
+            background: var(--tg-theme-bg-color, #fff); 
+            color: var(--tg-theme-text-color, #000); 
+        }
+        .editor-container { 
+            padding: 10px; height: 100vh; box-sizing: border-box; 
+            display: flex; flex-direction: column; 
+        }
+        button { 
+            background: var(--tg-theme-button-color, #3390ec); 
+            color: var(--tg-theme-button-text-color, #fff); 
+            border: none; padding: 14px; border-radius: 8px; 
+            font-size: 16px; font-weight: bold; margin-top: 10px; 
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.8; }
+        /* Адаптация редактора под темную тему Telegram */
+        .editor-toolbar, .CodeMirror { 
+            background: var(--tg-theme-bg-color, #fff); 
+            color: var(--tg-theme-text-color, #000); 
+            border-color: var(--tg-theme-hint-color, #ccc);
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <textarea id="markdown-editor"></textarea>
+        <button id="save-btn">💾 Сохранить в Obsidian</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
+
+        // Получаем данные из URL (путь и текст в Base64)
+        const urlParams = new URLSearchParams(window.location.search);
+        const filePath = urlParams.get('path') || 'Unknown.md';
+        const textBase64 = urlParams.get('text') || '';
+        
+        let decodedText = '';
+        try {
+            // Декодируем urlsafe_b64encode
+            let base64 = textBase64.replace(/-/g, '+').replace(/_/g, '/');
+            decodedText = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        } catch (e) {
+            console.error("Ошибка декодирования текста", e);
+            decodedText = "Ошибка загрузки текста.";
+        }
+
+        // Инициализируем редактор
+        const easyMDE = new EasyMDE({
+            element: document.getElementById('markdown-editor'),
+            initialValue: decodedText,
+            spellChecker: false,
+            status: false,
+            maxHeight: "calc(100vh - 140px)"
+        });
+
+        // Отправка данных обратно боту
+        document.getElementById('save-btn').addEventListener('click', () => {
+            tg.MainButton.showProgress();
+            const newContent = easyMDE.value();
+            const payload = JSON.stringify({ path: filePath, content: newContent });
+            
+            // Отправляем данные в Telegram (сработает обработчик WEB_APP_DATA в main.py)
+            tg.sendData(payload);
+        });
+    </script>
+</body>
+</html>

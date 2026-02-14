@@ -25,11 +25,22 @@
             cursor: pointer; transition: opacity 0.2s;
         }
         button:active { opacity: 0.8; }
-        /* Адаптация редактора под темную тему Telegram */
+        
+        /* Адаптация редактора под тему Telegram */
         .editor-toolbar, .CodeMirror { 
             background: var(--tg-theme-bg-color, #fff); 
             color: var(--tg-theme-text-color, #000); 
             border-color: var(--tg-theme-hint-color, #ccc);
+        }
+        
+        /* Делаем курсор (каретку) видимым и подстраиваем под цвет текста темы */
+        .CodeMirror-cursor {
+            border-left: 2px solid var(--tg-theme-text-color, #000) !important;
+        }
+        
+        /* Делаем красивое полупрозрачное выделение текста */
+        .CodeMirror-selected {
+            background-color: rgba(51, 144, 236, 0.3) !important;
         }
     </style>
 </head>
@@ -41,16 +52,16 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand(); // Разворачиваем окно на весь экран
 
-        // Получаем данные из URL (путь и текст в Base64)
+        // Получаем данные из URL (путь файла и текст в формате Base64)
         const urlParams = new URLSearchParams(window.location.search);
         const filePath = urlParams.get('path') || 'Unknown.md';
         const textBase64 = urlParams.get('text') || '';
         
         let decodedText = '';
         try {
-            // Декодируем urlsafe_b64encode
+            // Декодируем urlsafe_b64encode обратно в читаемый текст
             let base64 = textBase64.replace(/-/g, '+').replace(/_/g, '/');
             decodedText = decodeURIComponent(atob(base64).split('').map(function(c) {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
@@ -69,13 +80,13 @@
             maxHeight: "calc(100vh - 140px)"
         });
 
-        // Отправка данных обратно боту
+        // Отправка отредактированного текста обратно боту
         document.getElementById('save-btn').addEventListener('click', () => {
             tg.MainButton.showProgress();
             const newContent = easyMDE.value();
             const payload = JSON.stringify({ path: filePath, content: newContent });
             
-            // Отправляем данные в Telegram (сработает обработчик WEB_APP_DATA в main.py)
+            // Эта команда закрывает окно и отправляет данные в Python скрипт
             tg.sendData(payload);
         });
     </script>
